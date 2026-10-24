@@ -1,17 +1,28 @@
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
     public static PlayerController Instance;
+    public GameObject mainCamera;
 
     public float speed = 5.0f;
     public int kohleInInventory = 0;
     public float worth = 10.0f;
+    public Vector3 cameraRotation = new Vector3(30, 0, 0);
+    public Vector3 cameraOffset = new Vector3(0, 8, -10);
 
     void Awake()
     {
         Instance = this;
+    }
+
+    public void ApplyCameraSettings()
+    {
+        mainCamera.transform.position =
+            transform.position + cameraOffset;
+
+        mainCamera.transform.rotation =
+            Quaternion.Euler(cameraRotation);
     }
 
     void FixedUpdate()
@@ -27,6 +38,8 @@ public class PlayerController : MonoBehaviour
         }
 
         transform.Translate(movement.normalized * speed * Time.deltaTime, Space.World);
+
+        ApplyCameraSettings();
     }
 
     private void OnTriggerEnter(Collider other)

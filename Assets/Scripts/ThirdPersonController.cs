@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 [RequireComponent(typeof(CharacterController))]
 public class ThirdPersonController : MonoBehaviour
@@ -26,10 +27,12 @@ public class ThirdPersonController : MonoBehaviour
     [SerializeField] private float mouseSensitivity = 1.5f;
     [SerializeField]
     private Vector3 cameraDistance =
-        new Vector3(1f, 0f, -4f);
+        new Vector3(0f, -1.5f, -10f);
     [SerializeField] private float cameraSpeed = 7f;
     [SerializeField] private float minPitch = -25f;
     [SerializeField] private float maxPitch = 65f;
+
+    public GameObject mainCamera;
 
     private CharacterController controller;
 
@@ -59,12 +62,34 @@ public class ThirdPersonController : MonoBehaviour
 
         yaw = cameraPivot.eulerAngles.y;
         pitch = 10f;
+
+        UnityEngine.Cursor.lockState = CursorLockMode.Locked;
+        UnityEngine.Cursor.visible = false;
     }
 
     private void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        
+    }
+
+    public void ResetCameraView()
+    {
+        mainCamera.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+
+        yaw = transform.eulerAngles.y;
+        cameraDistance = new Vector3(0f, -1.5f, -10f);
+        pitch = 10f;
+
+        cameraPivot.position = transform.position
+            + Vector3.up * 1.5f;
+
+        cameraPivot.rotation = Quaternion.Euler(
+            pitch,
+            yaw,
+            0f
+        );
+
+        cameraTransform.localPosition = cameraDistance;
     }
 
     private void Update()
@@ -210,7 +235,7 @@ public class ThirdPersonController : MonoBehaviour
 
     private void OnDisable()
     {
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        UnityEngine.Cursor.lockState = CursorLockMode.None;
+        UnityEngine.Cursor.visible = true;
     }
 }
