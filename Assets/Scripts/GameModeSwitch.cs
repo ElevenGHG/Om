@@ -31,13 +31,13 @@ public class GameModeSwitch : MonoBehaviour
 
         if (normalIsActive)
         {
-            // Wechsel in den Combat-Modus
-            player.ApplyCameraSettings();
+            // Kampfmodus: Kamera hinter dem Spieler
+            thirdPerson.ResetCameraView();
         }
         else
         {
-            // Wechsel zurück in den Third-Person-Modus
-            thirdPerson.ResetCameraView();
+            // Normalmodus: Kamera schräg von oben
+            player.ApplyCameraSettings();
         }
     }
 }

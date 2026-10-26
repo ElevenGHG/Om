@@ -4,6 +4,7 @@ public class PlayerController : MonoBehaviour
 {
     public static PlayerController Instance;
     public GameObject mainCamera;
+    private CharacterController controller;
 
     public float speed = 5.0f;
     public int kohleInInventory = 0;
@@ -14,6 +15,7 @@ public class PlayerController : MonoBehaviour
     void Awake()
     {
         Instance = this;
+        controller = GetComponent<CharacterController>();
     }
 
     public void ApplyCameraSettings()
@@ -25,19 +27,25 @@ public class PlayerController : MonoBehaviour
             Quaternion.Euler(cameraRotation);
     }
 
-    void FixedUpdate()
+    void Update()
     {
         float horizontalInput = Input.GetAxis("Horizontal");
         float verticalInput = Input.GetAxis("Vertical");
 
-        Vector3 movement = new Vector3(horizontalInput, 0, verticalInput);
+        Vector3 movement = new Vector3(
+            horizontalInput,
+            0f,
+            verticalInput
+        );
 
-        if (movement != Vector3.zero)
+        movement = Vector3.ClampMagnitude(movement, 1f);
+
+        if (movement.sqrMagnitude > 0.001f)
         {
             transform.forward = movement.normalized;
         }
 
-        transform.Translate(movement.normalized * speed * Time.deltaTime, Space.World);
+        controller.Move(movement * speed * Time.deltaTime);
 
         ApplyCameraSettings();
     }

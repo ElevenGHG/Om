@@ -25,9 +25,7 @@ public class ThirdPersonController : MonoBehaviour
     [SerializeField] private Transform cameraPivot;
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private float mouseSensitivity = 1.5f;
-    [SerializeField]
-    private Vector3 cameraDistance =
-        new Vector3(0f, -1.5f, -10f);
+    [SerializeField] private Vector3 cameraDistance = new Vector3(0f, 0f, 0f);
     [SerializeField] private float cameraSpeed = 7f;
     [SerializeField] private float minPitch = -25f;
     [SerializeField] private float maxPitch = 65f;
@@ -62,22 +60,21 @@ public class ThirdPersonController : MonoBehaviour
 
         yaw = cameraPivot.eulerAngles.y;
         pitch = 10f;
-
-        UnityEngine.Cursor.lockState = CursorLockMode.Locked;
-        UnityEngine.Cursor.visible = false;
     }
 
-    private void Start()
+    private void OnEnable()
     {
-        
+        UnityEngine.Cursor.lockState = CursorLockMode.Locked;
+        UnityEngine.Cursor.visible = false;
     }
 
     public void ResetCameraView()
     {
         mainCamera.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
+        cameraTransform.localRotation = Quaternion.identity;
 
         yaw = transform.eulerAngles.y;
-        cameraDistance = new Vector3(0f, -1.5f, -10f);
+        cameraDistance = new Vector3(0f, 0, 0);
         pitch = 10f;
 
         cameraPivot.position = transform.position
@@ -107,8 +104,8 @@ public class ThirdPersonController : MonoBehaviour
         }
 
         Vector3 targetOffset = cameraOnLeft
-            ? new Vector3(-1f, 0f, -4f)
-            : new Vector3(1f, 0f, -4f);
+        ? new Vector3(-1f, -0.5f, -3f)
+        : new Vector3(1f, -0.5f, -3f);
 
         cameraDistance = Vector3.Lerp(
             cameraDistance,
