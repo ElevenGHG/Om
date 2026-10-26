@@ -1,7 +1,11 @@
 using UnityEngine;
+using System;
 
 public class GameModeSwitch : MonoBehaviour
 {
+    public event Action OnSwitchToNormalMode;
+    public event Action OnSwitchToCombatMode;
+
     public MonoBehaviour normalControl;
     public MonoBehaviour combatControl;
 
@@ -33,11 +37,13 @@ public class GameModeSwitch : MonoBehaviour
         {
             // Kampfmodus: Kamera hinter dem Spieler
             thirdPerson.ResetCameraView();
+            OnSwitchToCombatMode?.Invoke();
         }
         else
         {
             // Normalmodus: Kamera schräg von oben
             player.ApplyCameraSettings();
+            OnSwitchToNormalMode?.Invoke();
         }
     }
 }

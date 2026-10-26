@@ -1,54 +1,76 @@
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
 
+    [SerializeField] private GameModeSwitch gameModeSwitch;
+
     public float speed = 10f;
     public float kohle = 100f;
-    public float kohleSpawnRate = 5;
+    public float kohleSpawnRate = 5f;
 
     public GameObject kohlePrefabe;
 
-    private float kohleDecreaseRate = 0.1f; // Rate at which kohle decreases based on speed
+    private float kohleDecreaseRate = 0.1f;
 
     public TextMeshProUGUI speedText;
     public TextMeshProUGUI kohleText;
     public TextMeshProUGUI gameOverText;
+    public Image crosshair;
 
-    void Awake()
+    private void Awake()
     {
         Instance = this;
+
         gameOverText.gameObject.SetActive(false);
+
+        gameModeSwitch.OnSwitchToCombatMode += hidenormalmodeUI;
+        gameModeSwitch.OnSwitchToNormalMode += hidecombatmodeUI;
     }
 
     private void Start()
     {
-        StartCoroutine(SpawnKohle());
+        hidecombatmodeUI();
     }
 
-    IEnumerator SpawnKohle()
+    private void hidenormalmodeUI()
     {
-        yield return new WaitForSeconds(kohleSpawnRate);
-        Vector2 kohleSPawnPos = new Vector2(Random.Range(-75, 75), Random.Range(-3, 3));
-        Instantiate(kohlePrefabe, kohleSPawnPos, Quaternion.identity);
+        speedText.gameObject.SetActive(false);
+        kohleText.gameObject.SetActive(false);
+        crosshair.gameObject.SetActive(true);
     }
 
-    void Update()
+    private void hidecombatmodeUI()
+    {
+        speedText.gameObject.SetActive(true);
+        kohleText.gameObject.SetActive(true);
+        crosshair.gameObject.SetActive(false);
+    }
+
+    private void Update()
     {
         speedText.text = "Speed: " + speed;
         kohleText.text = $"Kohle: {Mathf.FloorToInt(kohle)}";
 
-        kohle -= speed * Time.deltaTime * kohleDecreaseRate; // Decrease kohle based on speed over time
+        kohle -= speed * Time.deltaTime * kohleDecreaseRate;
 
         if (kohle <= 0)
         {
             speed = 0;
             kohle = 0;
             gameOverText.gameObject.SetActive(true);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (gameModeSwitch != null)
+        {
+            gameModeSwitch.OnSwitchToCombatMode -= hidenormalmodeUI;
+            gameModeSwitch.OnSwitchToNormalMode -= hidecombatmodeUI;
         }
     }
 }
