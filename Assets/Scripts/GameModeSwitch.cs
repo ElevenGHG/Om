@@ -12,8 +12,11 @@ public class GameModeSwitch : MonoBehaviour
     public ThirdPersonController thirdPerson;
     public PlayerController player;
 
+    public GameObject gun;
+
     void Start()
     {
+        gun.SetActive(false);
         normalControl.enabled = true;
         combatControl.enabled = false;
     }
@@ -38,12 +41,14 @@ public class GameModeSwitch : MonoBehaviour
             // Kampfmodus: Kamera hinter dem Spieler
             thirdPerson.ResetCameraView();
             OnSwitchToCombatMode?.Invoke();
+            gun.SetActive(true);
         }
         else
         {
             // Normalmodus: Kamera schräg von oben
             player.ApplyCameraSettings();
             OnSwitchToNormalMode?.Invoke();
+            gun.SetActive(false);
         }
     }
 }

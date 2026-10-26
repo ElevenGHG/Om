@@ -10,9 +10,6 @@ public class GameManager : MonoBehaviour
 
     public float speed = 10f;
     public float kohle = 100f;
-    public float kohleSpawnRate = 5f;
-
-    public GameObject kohlePrefabe;
 
     private float kohleDecreaseRate = 0.1f;
 

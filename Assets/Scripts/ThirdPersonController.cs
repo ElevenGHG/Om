@@ -30,6 +30,10 @@ public class ThirdPersonController : MonoBehaviour
     [SerializeField] private float minPitch = -25f;
     [SerializeField] private float maxPitch = 65f;
 
+    [Header("Player Rotation")]
+    [SerializeField] private bool rotateWithCamera = true;
+    [SerializeField] private float bodyTurnSpeed = 15f;   // höher = Spieler dreht schneller mit
+
     public GameObject mainCamera;
 
     private CharacterController controller;
@@ -131,6 +135,18 @@ public class ThirdPersonController : MonoBehaviour
         );
 
         cameraTransform.localPosition = cameraDistance;
+
+        // Spieler dreht sich mit der Kamera
+        if (rotateWithCamera)
+        {
+            Quaternion targetRotation = Quaternion.Euler(0f, yaw, 0f);
+
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                bodyTurnSpeed * Time.deltaTime
+            );
+        }
     }
 
     private void Move()
