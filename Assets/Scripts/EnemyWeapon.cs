@@ -29,6 +29,9 @@ public class EnemyWeapon : MonoBehaviour
 
     [SerializeField] private float viewDistance = 20f;
 
+    [Header("Aim Accuracy")]
+    [SerializeField] private float aimSpread = 2.5f;
+
     private int currentAmmo;
     private float nextFireTime;
     private bool isReloading;
@@ -76,7 +79,7 @@ public class EnemyWeapon : MonoBehaviour
             return;
 
         // Nachladen, wenn Munition fehlt und gerade nicht nachgeladen wird.
-        if (!isReloading && currentAmmo < magazineSize)
+        if (!isReloading && currentAmmo <= 0)
         {
             StartCoroutine(Reload());
         }
@@ -126,8 +129,12 @@ public class EnemyWeapon : MonoBehaviour
     {
         Vector3 targetPoint = player.transform.position;
 
-        Vector3 shootDirection =
-            (targetPoint - muzzle.position).normalized;
+        Vector3 shootDirection = (targetPoint - muzzle.position).normalized;
+
+        shootDirection += muzzle.right * UnityEngine.Random.Range(-aimSpread, aimSpread) * 0.01f;
+        shootDirection += muzzle.up * UnityEngine.Random.Range(-aimSpread, aimSpread) * 0.01f;
+
+        shootDirection.Normalize();
 
         if (Physics.Raycast(muzzle.position, shootDirection, out RaycastHit weaponHit, range, hitLayers))
         {

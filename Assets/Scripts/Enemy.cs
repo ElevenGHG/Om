@@ -82,46 +82,39 @@ public class Enemy : MonoBehaviour
 
     private bool CanSeePlayer()
     {
-        // Position des Gegners auf Augenhöhe.
-        Vector3 eyePosition = transform.position + Vector3.up;
+        if (player == null)
+            return false;
 
-        // Zielpunkt ungefähr auf Höhe des Oberkörpers.
+        Vector3 eyePosition = transform.position + Vector3.up;
         Vector3 targetPosition = player.position + Vector3.up;
 
-        // Richtung vom Gegner zum Spieler.
-        Vector3 directionToPlayer =
-            targetPosition - eyePosition;
-
-        // Abstand zwischen Gegner und Spieler.
+        Vector3 directionToPlayer = targetPosition - eyePosition;
         float distanceToPlayer = directionToPlayer.magnitude;
 
-        // Prüfen, ob der Spieler innerhalb der Sichtweite ist.
         if (distanceToPlayer > viewDistance)
-        {
             return false;
-        }
 
-        // Den Richtungsvektor auf die Länge 1 normieren.
         directionToPlayer.Normalize();
 
-        // Prüfen, welches Objekt der Sichtstrahl zuerst trifft.
         if (Physics.Raycast(
             eyePosition,
             directionToPlayer,
             out RaycastHit hit,
-            viewDistance,
-            visionLayers))
+            distanceToPlayer,
+            visionLayers,
+            QueryTriggerInteraction.Ignore))
         {
-            // Sichtkontakt besteht, wenn der Spieler
-            // oder eines seiner untergeordneten Objekte getroffen wird.
             return hit.transform == player ||
                    hit.transform.IsChildOf(player);
         }
 
-        // Kein Objekt getroffen: kein Sichtkontakt.
         return false;
     }
 
+    public bool CanSeePlayerForAI()
+    {
+        return player != null && CanSeePlayer();
+    }
 
     private void LookAtPlayer()
     {
@@ -198,7 +191,6 @@ public class Enemy : MonoBehaviour
 
         flashCoroutine = null;
     }
-
 
     private void Die()
     {

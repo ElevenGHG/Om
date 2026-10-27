@@ -1,4 +1,4 @@
-
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UIElements;
 using TMPro;
@@ -44,6 +44,20 @@ public class ThirdPersonController : MonoBehaviour
     [SerializeField] private float regenerationDelay = 4f;
     [SerializeField] private float regenerationPerSecond = 10f;
 
+    [Header("Hit Flash")]
+    [SerializeField] private Renderer[] playerRenderers;
+    [SerializeField] private Color flashColor = Color.white;
+    [SerializeField] private float flashDuration = 0.1f;
+
+    private MaterialPropertyBlock propertyBlock;
+    private Coroutine flashCoroutine;
+
+    private static readonly int BaseColorID =
+        Shader.PropertyToID("_BaseColor");
+
+    private static readonly int ColorID =
+        Shader.PropertyToID("_Color");
+
     private float lastDamageTime;
     private float regenerationProgress;
 
@@ -65,6 +79,13 @@ public class ThirdPersonController : MonoBehaviour
 
     private void Awake()
     {
+        propertyBlock = new MaterialPropertyBlock();
+
+        if (playerRenderers == null || playerRenderers.Length == 0)
+        {
+            playerRenderers = GetComponentsInChildren<Renderer>();
+        }
+
         controller = GetComponent<CharacterController>();
 
         health = Mathf.Clamp(health, 0, maxHealth);
@@ -312,6 +333,39 @@ public class ThirdPersonController : MonoBehaviour
         {
             Die();
         }
+
+        if (flashCoroutine != null)
+        {
+            StopCoroutine(flashCoroutine);
+        }
+
+        flashCoroutine = StartCoroutine(HitFlash());
+    }
+
+    private IEnumerator HitFlash()
+    {
+        foreach (Renderer rend in playerRenderers)
+        {
+            if (rend == null) continue;
+
+            rend.GetPropertyBlock(propertyBlock);
+
+            propertyBlock.SetColor(BaseColorID, flashColor);
+            propertyBlock.SetColor(ColorID, flashColor);
+
+            rend.SetPropertyBlock(propertyBlock);
+        }
+
+        yield return new WaitForSeconds(flashDuration);
+
+        foreach (Renderer rend in playerRenderers)
+        {
+            if (rend == null) continue;
+
+            rend.SetPropertyBlock(null);
+        }
+
+        flashCoroutine = null;
     }
 
     private void Die()

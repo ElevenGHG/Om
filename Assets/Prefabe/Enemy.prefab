@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 3205784891421047083}
   - component: {fileID: 4117939258477628773}
   - component: {fileID: 5866946186048655647}
+  - component: {fileID: 7734355212851826828}
+  - component: {fileID: 2528363416284825001}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Untagged
@@ -129,9 +131,55 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
   health: 100
+  player: {fileID: 0}
+  viewDistance: 20
+  visionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  turnSpeed: 7.5
+  shootAngle: 10
   enemyRenderers: []
   flashColor: {r: 1, g: 1, b: 1, a: 1}
   flashDuration: 0.1
+--- !u!195 &7734355212851826828
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5476846978221627516}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 5
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 3
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 1
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
+--- !u!114 &2528363416284825001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5476846978221627516}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d28ffdd7d28c2a4dbe399ad4d38e216, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
+  player: {fileID: 0}
+  attackDistance: 10
+  searchDuration: 5
+  arrivalDistance: 1
+  turnSpeed: 6
 --- !u!1001 &6365163388208395479
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -140,6 +188,30 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3358580156389267826}
     m_Modifications:
+    - target: {fileID: 2780907074980718156, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
+      propertyPath: damage
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 2780907074980718156, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
+      propertyPath: aimSpread
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2780907074980718156, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
+      propertyPath: reloadTime
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2780907074980718156, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
+      propertyPath: magazineSize
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 2780907074980718156, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
+      propertyPath: automaticFire
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2780907074980718156, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
+      propertyPath: shotsPerSecond
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 6787650318938881218, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
       propertyPath: m_Name
       value: EnemyGun
