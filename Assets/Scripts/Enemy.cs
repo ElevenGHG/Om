@@ -3,7 +3,17 @@ using System.Collections;
 
 public class Enemy : MonoBehaviour
 {
+    [Header("Health")]
     public float health = 100f;
+
+    [Header("Player Detection")]
+    [SerializeField] private Transform player;
+    [SerializeField] private float viewDistance = 20f;
+    [SerializeField] private LayerMask visionLayers = ~0;
+
+    [Header("Rotation")]
+    [SerializeField] private float turnSpeed = 5f;
+    [SerializeField] private float shootAngle = 10f;
 
     [Header("Hit Flash")]
     [SerializeField] private Renderer[] enemyRenderers;
@@ -13,8 +23,12 @@ public class Enemy : MonoBehaviour
     private MaterialPropertyBlock propertyBlock;
     private Coroutine flashCoroutine;
 
-    private static readonly int BaseColorID = Shader.PropertyToID("_BaseColor");
-    private static readonly int ColorID = Shader.PropertyToID("_Color");
+    private static readonly int BaseColorID =
+        Shader.PropertyToID("_BaseColor");
+
+    private static readonly int ColorID =
+        Shader.PropertyToID("_Color");
+
 
     private void Awake()
     {
@@ -24,7 +38,119 @@ public class Enemy : MonoBehaviour
         {
             enemyRenderers = GetComponentsInChildren<Renderer>();
         }
+
+        player = GameObject.FindGameObjectWithTag("Player").transform;
     }
+
+
+    private void Update()
+    {
+        // Nur drehen, wenn ein Spieler zugewiesen wurde
+        // und der Gegner ihn sehen kann.
+        if (player != null && CanSeePlayer())
+        {
+            LookAtPlayer();
+        }
+    }
+
+    public bool IsAimedAtPlayer()
+    {
+        if (player == null)
+            return false;
+
+        // Richtung vom Gegner zum Spieler berechnen.
+        Vector3 directionToPlayer =
+            player.position - transform.position;
+
+        // Nur die horizontale Richtung berücksichtigen.
+        directionToPlayer.y = 0f;
+
+        // Prüfen, ob die Richtung gültig ist.
+        if (directionToPlayer.sqrMagnitude < 0.001f)
+            return true;
+
+        // Winkel zwischen Blickrichtung des Gegners
+        // und Richtung zum Spieler berechnen.
+        float angle = Vector3.Angle(
+            transform.forward,
+            directionToPlayer.normalized
+        );
+
+        // Nur schießen erlauben, wenn der Winkel klein genug ist.
+        return angle <= shootAngle;
+    }
+
+    private bool CanSeePlayer()
+    {
+        // Position des Gegners auf Augenhöhe.
+        Vector3 eyePosition = transform.position + Vector3.up;
+
+        // Zielpunkt ungefähr auf Höhe des Oberkörpers.
+        Vector3 targetPosition = player.position + Vector3.up;
+
+        // Richtung vom Gegner zum Spieler.
+        Vector3 directionToPlayer =
+            targetPosition - eyePosition;
+
+        // Abstand zwischen Gegner und Spieler.
+        float distanceToPlayer = directionToPlayer.magnitude;
+
+        // Prüfen, ob der Spieler innerhalb der Sichtweite ist.
+        if (distanceToPlayer > viewDistance)
+        {
+            return false;
+        }
+
+        // Den Richtungsvektor auf die Länge 1 normieren.
+        directionToPlayer.Normalize();
+
+        // Prüfen, welches Objekt der Sichtstrahl zuerst trifft.
+        if (Physics.Raycast(
+            eyePosition,
+            directionToPlayer,
+            out RaycastHit hit,
+            viewDistance,
+            visionLayers))
+        {
+            // Sichtkontakt besteht, wenn der Spieler
+            // oder eines seiner untergeordneten Objekte getroffen wird.
+            return hit.transform == player ||
+                   hit.transform.IsChildOf(player);
+        }
+
+        // Kein Objekt getroffen: kein Sichtkontakt.
+        return false;
+    }
+
+
+    private void LookAtPlayer()
+    {
+        // Richtung zum Spieler berechnen.
+        Vector3 direction = player.position - transform.position;
+
+        // Nur horizontal drehen, damit der Gegner
+        // sich nicht nach oben oder unten neigt.
+        direction.y = 0f;
+
+        // Verhindern, dass eine ungültige Richtung entsteht,
+        // wenn Gegner und Spieler exakt übereinander stehen.
+        if (direction.sqrMagnitude < 0.001f)
+        {
+            return;
+        }
+
+        // Gewünschte Rotation in Richtung des Spielers berechnen.
+        Quaternion targetRotation =
+            Quaternion.LookRotation(direction);
+
+        // Den Gegner weich in Richtung des Spielers drehen.
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            targetRotation,
+            turnSpeed * Time.deltaTime
+        );
+    }
+
 
     public void TakeDamage(float damage)
     {
@@ -45,6 +171,7 @@ public class Enemy : MonoBehaviour
 
         flashCoroutine = StartCoroutine(HitFlash());
     }
+
 
     private IEnumerator HitFlash()
     {
@@ -71,6 +198,7 @@ public class Enemy : MonoBehaviour
 
         flashCoroutine = null;
     }
+
 
     private void Die()
     {

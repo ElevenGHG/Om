@@ -1,5 +1,7 @@
+
 using UnityEngine;
 using UnityEngine.UIElements;
+using TMPro;
 
 [RequireComponent(typeof(CharacterController))]
 public class ThirdPersonController : MonoBehaviour
@@ -32,7 +34,22 @@ public class ThirdPersonController : MonoBehaviour
 
     [Header("Player Rotation")]
     [SerializeField] private bool rotateWithCamera = true;
-    [SerializeField] private float bodyTurnSpeed = 15f;   // höher = Spieler dreht schneller mit
+    [SerializeField] private float bodyTurnSpeed = 15f;
+
+    [Header("Health")]
+    public int health = 100;
+    [SerializeField] private int maxHealth = 100;
+
+    [Header("Health Regeneration")]
+    [SerializeField] private float regenerationDelay = 4f;
+    [SerializeField] private float regenerationPerSecond = 10f;
+
+    private float lastDamageTime;
+    private float regenerationProgress;
+
+    [Header("UI")]
+    [SerializeField] private TMP_Text healthBarUI;
+    [SerializeField] private TMP_Text gameOverText;
 
     public GameObject mainCamera;
 
@@ -49,6 +66,11 @@ public class ThirdPersonController : MonoBehaviour
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
+
+        health = Mathf.Clamp(health, 0, maxHealth);
+        lastDamageTime = Time.time;
+
+        UpdateHealthUI();
 
         if (cameraPivot == null || cameraTransform == null)
         {
@@ -72,25 +94,12 @@ public class ThirdPersonController : MonoBehaviour
         UnityEngine.Cursor.visible = false;
     }
 
-    public void ResetCameraView()
+    private void UpdateHealthUI()
     {
-        mainCamera.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
-        cameraTransform.localRotation = Quaternion.identity;
+        if (healthBarUI == null)
+            return;
 
-        yaw = transform.eulerAngles.y;
-        cameraDistance = new Vector3(0f, 0, 0);
-        pitch = 10f;
-
-        cameraPivot.position = transform.position
-            + Vector3.up * 1.5f;
-
-        cameraPivot.rotation = Quaternion.Euler(
-            pitch,
-            yaw,
-            0f
-        );
-
-        cameraTransform.localPosition = cameraDistance;
+        healthBarUI.text = $"Health: {health}";
     }
 
     private void Update()
@@ -98,6 +107,46 @@ public class ThirdPersonController : MonoBehaviour
         CameraOffset();
         Look();
         Move();
+        RegenerateHealth();
+    }
+
+    private void RegenerateHealth()
+    {
+        // Bei 0 Leben oder vollen Lebenspunkten nicht regenerieren.
+        if (health <= 0 || health >= maxHealth)
+        {
+            regenerationProgress = 0f;
+            return;
+        }
+
+        // Warten, bis der Spieler lange genug keinen Schaden
+        // mehr erhalten hat.
+        if (Time.time - lastDamageTime < regenerationDelay)
+        {
+            return;
+        }
+
+        // Regenerationsfortschritt sammeln.
+        regenerationProgress +=
+            regenerationPerSecond * Time.deltaTime;
+
+        // Ganze Lebenspunkte wiederherstellen.
+        int healAmount = Mathf.FloorToInt(regenerationProgress);
+
+        if (healAmount > 0)
+        {
+            int oldHealth = health;
+
+            health = Mathf.Min(maxHealth, health + healAmount);
+
+            regenerationProgress -= healAmount;
+
+            // Nur aktualisieren, wenn sich das Leben verändert hat.
+            if (health != oldHealth)
+            {
+                UpdateHealthUI();
+            }
+        }
     }
 
     private void CameraOffset()
@@ -108,8 +157,8 @@ public class ThirdPersonController : MonoBehaviour
         }
 
         Vector3 targetOffset = cameraOnLeft
-        ? new Vector3(-1f, -0.5f, -3f)
-        : new Vector3(1f, -0.5f, -3f);
+            ? new Vector3(-1f, -0.5f, -3f)
+            : new Vector3(1f, -0.5f, -3f);
 
         cameraDistance = Vector3.Lerp(
             cameraDistance,
@@ -136,10 +185,10 @@ public class ThirdPersonController : MonoBehaviour
 
         cameraTransform.localPosition = cameraDistance;
 
-        // Spieler dreht sich mit der Kamera
         if (rotateWithCamera)
         {
-            Quaternion targetRotation = Quaternion.Euler(0f, yaw, 0f);
+            Quaternion targetRotation =
+                Quaternion.Euler(0f, yaw, 0f);
 
             transform.rotation = Quaternion.Slerp(
                 transform.rotation,
@@ -175,8 +224,7 @@ public class ThirdPersonController : MonoBehaviour
         // Schwerkraft
         verticalVelocity += gravity * Time.deltaTime;
 
-        // Eingabe begrenzen, damit diagonale Bewegung
-        // nicht schneller ist
+        // Diagonale Bewegung begrenzen
         Vector3 input = Vector3.ClampMagnitude(
             new Vector3(x, 0f, z),
             1f
@@ -225,10 +273,10 @@ public class ThirdPersonController : MonoBehaviour
             currentSpeed = walkSpeed;
         }
 
-        // Zielgeschwindigkeit berechnen
+        // Zielgeschwindigkeit
         Vector3 targetVelocity = moveDirection * currentSpeed;
 
-        // Sanft beschleunigen und abbremsen
+        // Beschleunigen und abbremsen
         float changeRate = moveDirection.sqrMagnitude > 0.01f
             ? acceleration
             : deceleration;
@@ -244,6 +292,62 @@ public class ThirdPersonController : MonoBehaviour
         velocity.y = verticalVelocity;
 
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    public void TakeDamage(int damage)
+    {
+        // Nach dem Tod keinen weiteren Schaden verarbeiten.
+        if (health <= 0 || damage <= 0)
+            return;
+
+        health = Mathf.Max(0, health - damage);
+
+        // Timer zurücksetzen, weil der Spieler Schaden erhalten hat.
+        lastDamageTime = Time.time;
+        regenerationProgress = 0f;
+
+        UpdateHealthUI();
+
+        if (health <= 0)
+        {
+            Die();
+        }
+    }
+
+    private void Die()
+    {
+        if (gameOverText != null)
+        {
+            gameOverText.gameObject.SetActive(true);
+        }
+
+        Time.timeScale = 0f;
+    }
+
+    public void ResetCameraView()
+    {
+        if (mainCamera != null)
+        {
+            mainCamera.transform.rotation =
+                Quaternion.Euler(0f, 0f, 0f);
+        }
+
+        cameraTransform.localRotation = Quaternion.identity;
+
+        yaw = transform.eulerAngles.y;
+        cameraDistance = Vector3.zero;
+        pitch = 10f;
+
+        cameraPivot.position = transform.position
+            + Vector3.up * 1.5f;
+
+        cameraPivot.rotation = Quaternion.Euler(
+            pitch,
+            yaw,
+            0f
+        );
+
+        cameraTransform.localPosition = cameraDistance;
     }
 
     private void OnDisable()

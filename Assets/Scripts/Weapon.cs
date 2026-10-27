@@ -147,12 +147,7 @@ public class Weapon : MonoBehaviour
         Vector3 shootDirection =
             (targetPoint - muzzle.position).normalized;
 
-        if (Physics.Raycast(
-            muzzle.position,
-            shootDirection,
-            out RaycastHit weaponHit,
-            range,
-            hitLayers))
+        if (Physics.Raycast(muzzle.position, shootDirection, out RaycastHit weaponHit, range,hitLayers))
         {
             Enemy enemy =
                 weaponHit.collider.GetComponentInParent<Enemy>();
