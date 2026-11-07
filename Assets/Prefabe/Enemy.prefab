@@ -190,7 +190,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2780907074980718156, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
       propertyPath: damage
-      value: 15
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 2780907074980718156, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
       propertyPath: aimSpread
@@ -210,7 +210,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2780907074980718156, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
       propertyPath: shotsPerSecond
-      value: 10
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6787650318938881218, guid: c42b39b3b83cf224e8a8a58adf0dc7c9, type: 3}
       propertyPath: m_Name

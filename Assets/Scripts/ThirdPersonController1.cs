@@ -77,6 +77,40 @@ public class ThirdPersonController : MonoBehaviour
 
     private Vector3 currentHorizontalVelocity;
 
+    // Bewegliche Plattform, auf der der Spieler steht.
+    private Transform currentPlatform;
+    private Transform platformThisFrame;
+
+    private Vector3 lastPlatformPosition;
+
+    // Bewegung der Plattform, auf der der Spieler steht.
+    private Vector3 platformVelocity;
+
+    // Geschwindigkeit, die beim Abspringen übernommen wird.
+    private Vector3 inheritedPlatformVelocity;
+
+    // War der Spieler im letzten Frame am Boden?
+    private bool wasGrounded;
+
+    // Verhindert, dass der Waggon beim Absprung sofort erneut erkannt wird.
+    private bool ignorePlatformDetection;
+
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (ignorePlatformDetection)
+            return;
+
+        // Nur Treffer von oben als Standfläche werten.
+        if (hit.normal.y < 0.5f)
+            return;
+
+        MovingWagon movingWagon =
+            hit.collider.GetComponentInParent<MovingWagon>();
+
+        if (movingWagon != null)
+            platformThisFrame = movingWagon.transform;
+    }
+
     private void Awake()
     {
         propertyBlock = new MaterialPropertyBlock();
@@ -222,36 +256,49 @@ public class ThirdPersonController : MonoBehaviour
     private void Move()
     {
         bool isGrounded = controller.isGrounded;
+        float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
+
+        // Die tatsächliche Bewegung des Waggons seit dem letzten Frame messen.
+        platformVelocity = Vector3.zero;
+
+        if (currentPlatform != null)
+        {
+            platformVelocity =
+                (currentPlatform.position - lastPlatformPosition) / deltaTime;
+        }
 
         if (Input.GetKeyDown(crouchKey))
-        {
             isCrouching = !isCrouching;
-        }
 
         if (isGrounded && verticalVelocity < 0f)
-        {
             verticalVelocity = -2f;
-        }
 
         float x = Input.GetAxis("Horizontal");
         float z = Input.GetAxis("Vertical");
 
-        // Springen
-        if (isGrounded && !isCrouching && Input.GetButtonDown("Jump"))
+        bool jumping = controller.isGrounded &&
+               !isCrouching &&
+               (Input.GetButtonDown("Jump") ||
+                Input.GetKeyDown(KeyCode.Space));
+
+        if (jumping)
         {
-            verticalVelocity = jumpForce;
+            // Die Zuggeschwindigkeit genau einmal beim Absprung übernehmen.
+            inheritedPlatformVelocity = currentPlatform != null
+                ? platformVelocity
+                : Vector3.zero;
+
+            currentPlatform = null;
+            platformThisFrame = null;
         }
 
-        // Schwerkraft
         verticalVelocity += gravity * Time.deltaTime;
 
-        // Diagonale Bewegung begrenzen
         Vector3 input = Vector3.ClampMagnitude(
             new Vector3(x, 0f, z),
             1f
         );
 
-        // Bewegungsrichtung relativ zur Kamera
         Vector3 forward = cameraPivot.forward;
         Vector3 right = cameraPivot.right;
 
@@ -261,10 +308,8 @@ public class ThirdPersonController : MonoBehaviour
         forward.Normalize();
         right.Normalize();
 
-        Vector3 moveDirection =
-            forward * input.z + right * input.x;
+        Vector3 moveDirection = forward * input.z + right * input.x;
 
-        // Charakter in Bewegungsrichtung drehen
         if (moveDirection.sqrMagnitude > 0.01f)
         {
             Quaternion targetRotation =
@@ -279,25 +324,12 @@ public class ThirdPersonController : MonoBehaviour
 
         bool isSprinting = Input.GetKey(KeyCode.LeftShift);
 
-        float currentSpeed;
+        float currentSpeed = isCrouching
+            ? crouchSpeed
+            : (isSprinting ? runSpeed : walkSpeed);
 
-        if (isCrouching)
-        {
-            currentSpeed = crouchSpeed;
-        }
-        else if (isSprinting)
-        {
-            currentSpeed = runSpeed;
-        }
-        else
-        {
-            currentSpeed = walkSpeed;
-        }
-
-        // Zielgeschwindigkeit
         Vector3 targetVelocity = moveDirection * currentSpeed;
 
-        // Beschleunigen und abbremsen
         float changeRate = moveDirection.sqrMagnitude > 0.01f
             ? acceleration
             : deceleration;
@@ -308,11 +340,58 @@ public class ThirdPersonController : MonoBehaviour
             changeRate * Time.deltaTime
         );
 
-        // Horizontale und vertikale Bewegung kombinieren
         Vector3 velocity = currentHorizontalVelocity;
         velocity.y = verticalVelocity;
 
-        controller.Move(velocity * Time.deltaTime);
+        Vector3 totalMovement = velocity * Time.deltaTime;
+
+        if (!jumping && currentPlatform != null)
+        {
+            // Auf dem Waggon exakt dessen Positionsänderung übernehmen.
+            totalMovement +=
+                currentPlatform.position - lastPlatformPosition;
+        }
+        else if (inheritedPlatformVelocity.sqrMagnitude > 0.0001f)
+        {
+            // Nach dem Absprung die Zugbewegung beibehalten,
+            // unabhängig von der Blickrichtung.
+            totalMovement +=
+                inheritedPlatformVelocity * Time.deltaTime;
+        }
+
+        // Während des Absprungs darf der Kollisionscallback den Waggon
+        // nicht sofort wieder als aktuelle Plattform setzen.
+        ignorePlatformDetection = jumping;
+
+        controller.Move(totalMovement);
+
+        ignorePlatformDetection = false;
+
+        if (jumping)
+        {
+            currentPlatform = null;
+            platformThisFrame = null;
+        }
+        else if (platformThisFrame != null)
+        {
+            currentPlatform = platformThisFrame;
+            lastPlatformPosition = currentPlatform.position;
+            inheritedPlatformVelocity = Vector3.zero;
+            platformThisFrame = null;
+        }
+        else if (controller.isGrounded)
+        {
+            // Auf normalem Boden angekommen:
+            // keine Zuggeschwindigkeit mehr behalten.
+            currentPlatform = null;
+            inheritedPlatformVelocity = Vector3.zero;
+            platformThisFrame = null;
+        }
+        else
+        {
+            currentPlatform = null;
+            platformThisFrame = null;
+        }
     }
 
     public void TakeDamage(int damage)
@@ -346,7 +425,8 @@ public class ThirdPersonController : MonoBehaviour
     {
         foreach (Renderer rend in playerRenderers)
         {
-            if (rend == null) continue;
+            if (rend == null)
+                continue;
 
             rend.GetPropertyBlock(propertyBlock);
 
@@ -360,7 +440,8 @@ public class ThirdPersonController : MonoBehaviour
 
         foreach (Renderer rend in playerRenderers)
         {
-            if (rend == null) continue;
+            if (rend == null)
+                continue;
 
             rend.SetPropertyBlock(null);
         }
