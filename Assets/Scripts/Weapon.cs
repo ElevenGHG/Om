@@ -1,172 +1,136 @@
-using UnityEngine;
+
 using System.Collections;
+using UnityEngine;
 using TMPro;
 
 public class Weapon : MonoBehaviour
 {
-    [Header("Weapon References")]
-    [SerializeField] private Camera playerCamera;
-    [SerializeField] private Transform muzzle;
-    [SerializeField] private BulletTracer bulletTracerPrefab;
+    [Header("Weapon Settings")]
+    public float damage = 10f;
+    public float fireRate = 0.5f;
+    public int magazineSize = 30;
+    public float reloadTime = 2f;
 
-    [Header("Weapon Stats")]
-    [SerializeField] private float range = 100f;
-    [SerializeField] private LayerMask hitLayers = ~0;
-    [SerializeField] private float damage = 25f;
+    [Header("Aim Settings")]
+    public Camera playerCamera;
+    public float normalFOV = 60f;
+    public float aimingFOV = 40f;
+    public float aimSpeed = 10f;
 
-    [Header("Fire Rate")]
-    [SerializeField] private float shotsPerSecond = 8f;
+    [Header("UI")]
+    public TextMeshProUGUI ammoText;
 
-    [Tooltip("Aktiviert: Maustaste halten. Deaktiviert: einzeln klicken.")]
-    [SerializeField] private bool automaticFire = true;
+    public Transform cameraTransform;
 
-    [Header("Ammo")]
-    [SerializeField] private int magazineSize = 30;
-    [SerializeField] private float reloadTime = 1.5f;
+    bool canShoot = true;
+    bool isReloading = false;
+    bool isAiming = false;
 
-    [Header("Ammo UI")]
-    [SerializeField] private TMP_Text ammoText;
-
-    [Header("Aim")]
-    [SerializeField] private float normalFOV = 60f;
-    [SerializeField] private float aimFOV = 40f;
-    [SerializeField] private float aimSpeed = 10f;
-
-    private int currentAmmo;
-    private float nextFireTime;
-    private bool isReloading;
-    private bool isAiming;
+    int currentAmmo;
 
     private void Start()
     {
         currentAmmo = magazineSize;
-        UpdateAmmoUI();
+        updateAmmoText();
+
+        if (playerCamera == null)
+            playerCamera = Camera.main;
+
+        if (playerCamera != null)
+            playerCamera.fieldOfView = normalFOV;
     }
 
     private void Update()
     {
-        Aim();
+        // Aiming
+        isAiming = Input.GetMouseButton(1);
 
-        // Nachladen mit R
-        if (Input.GetKeyDown(KeyCode.R)
-            && !isReloading
-            && currentAmmo < magazineSize)
+        if (playerCamera != null)
+        {
+            float targetFOV = isAiming ? aimingFOV : normalFOV;
+
+            playerCamera.fieldOfView = Mathf.Lerp(
+                playerCamera.fieldOfView,
+                targetFOV,
+                aimSpeed * Time.deltaTime
+            );
+        }
+
+        // Shooting
+        if (Input.GetMouseButton(0) &&
+            currentAmmo > 0 &&
+            canShoot &&
+            !isReloading)
+        {
+            shoot();
+        }
+
+        // Manual Reload
+        else if (Input.GetKeyDown(KeyCode.R) &&
+                 currentAmmo < magazineSize &&
+                 !isReloading)
         {
             StartCoroutine(Reload());
         }
 
-        // Automatisch oder einzeln schießen
-        bool wantsToShoot = automaticFire
-            ? Input.GetMouseButton(0)
-            : Input.GetMouseButtonDown(0);
-
-        if (wantsToShoot && !isReloading)
+        // Automatic Reload
+        else if (currentAmmo <= 0 && !isReloading)
         {
-            if (currentAmmo > 0 && Time.time >= nextFireTime)
-            {
-                Shoot();
-
-                currentAmmo--;
-                UpdateAmmoUI();
-
-                nextFireTime = Time.time + 1f / Mathf.Max(shotsPerSecond, 0.01f);
-            }
-            else if (currentAmmo <= 0)
-            {
-                StartCoroutine(Reload());
-            }
+            StartCoroutine(Reload());
         }
     }
 
-    private void Aim()
+    void shoot()
     {
-        isAiming = Input.GetMouseButton(1);
+        currentAmmo--;
+        updateAmmoText();
 
-        float targetFOV = isAiming ? aimFOV : normalFOV;
-
-        playerCamera.fieldOfView = Mathf.Lerp(
-            playerCamera.fieldOfView,
-            targetFOV,
-            Time.deltaTime * aimSpeed
-        );
-    }
-
-    private IEnumerator Reload()
-    {
-        isReloading = true;
-        UpdateAmmoUI();
-
-        yield return new WaitForSeconds(reloadTime);
-
-        currentAmmo = magazineSize;
-        isReloading = false;
-
-        UpdateAmmoUI();
-    }
-
-    private void UpdateAmmoUI()
-    {
-        if (ammoText == null)
-            return;
-
-        if (isReloading)
-        {
-            ammoText.text = "Reloading...";
-        }
-        else
-        {
-            ammoText.text = currentAmmo + " / " + magazineSize;
-        }
-    }
-
-    private Vector3 GetTargetPoint()
-    {
-        Ray cameraRay = playerCamera.ViewportPointToRay(
-            new Vector3(0.5f, 0.5f, 0f)
-        );
-
-        Vector3 targetPoint =
-            cameraRay.origin + cameraRay.direction * range;
+        RaycastHit hit;
 
         if (Physics.Raycast(
-            cameraRay,
-            out RaycastHit cameraHit,
-            range,
-            hitLayers))
+            cameraTransform.position,
+            cameraTransform.forward,
+            out hit,
+            100f))
         {
-            targetPoint = cameraHit.point;
-        }
-
-        return targetPoint;
-    }
-
-    private void Shoot()
-    {
-        Vector3 targetPoint = GetTargetPoint();
-
-        Vector3 shootDirection =
-            (targetPoint - muzzle.position).normalized;
-
-        if (Physics.Raycast(muzzle.position, shootDirection, out RaycastHit weaponHit, range,hitLayers))
-        {
-            Enemy enemy =
-                weaponHit.collider.GetComponentInParent<Enemy>();
+            Enemy enemy = hit.collider.GetComponent<Enemy>();
 
             if (enemy != null)
             {
                 enemy.TakeDamage(damage);
             }
-
-            BulletTracer tracer = Instantiate(bulletTracerPrefab);
-            tracer.Show(muzzle.position, weaponHit.point);
         }
-        else
+
+        canShoot = false;
+        StartCoroutine(ShootGun());
+    }
+
+    void updateAmmoText()
+    {
+        if (ammoText != null)
         {
-            Vector3 endPoint =
-                muzzle.position + shootDirection * range;
-
-            BulletTracer tracer = Instantiate(bulletTracerPrefab);
-            tracer.Show(muzzle.position, endPoint);
+            ammoText.text = currentAmmo + " / " + magazineSize;
         }
+    }
+
+    IEnumerator Reload()
+    {
+        isReloading = true;
+        canShoot = false;
+
+        yield return new WaitForSeconds(reloadTime);
+
+        currentAmmo = magazineSize;
+        updateAmmoText();
+
+        isReloading = false;
+        canShoot = true;
+    }
+
+    IEnumerator ShootGun()
+    {
+        yield return new WaitForSeconds(fireRate);
+
+        canShoot = true;
     }
 }
